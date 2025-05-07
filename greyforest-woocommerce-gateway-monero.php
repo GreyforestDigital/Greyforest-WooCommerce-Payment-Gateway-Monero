@@ -1,56 +1,84 @@
 <?php
 /*
-Plugin Name: Greyforest ::: WooCommerce Payment Gateway - Monero
-Plugin URI: https://www.greyforest.media/plugins
-Description: Adds Monero (XMR) option to payment gateways.
-Version: 2.1.1
-Author: Greyforest Media
-Author URI: https://www.greyforest.media
-WC requires at least: 3.0.0
-WC tested up to: 3.8.1
+Plugin Name: Greyforest ::: Monero (XMR) Payment Gateway for WooCommerce
+Plugin URI: https://github.com/GreyforestDigital/Greyforest-WooCommerce-Payment-Gateway-Monero
+Description: Adds minimal Monero (XMR) payment gateway to WooCommerce.
+Version: 2.2.0
+Author: Greyforest Digital
+Author URI: https://www.greyforestdigital.com
+Requires at least: 6.0.0
+Tested up to: 6.8.1
+WC requires at least: 6.0.0
+WC tested up to: 9.8.4
 */
+
+if (!defined('ABSPATH')) { return; }
+
+define('GF_WC_PG_MONERO_PLUGIN_URL',plugin_dir_url( __FILE__ ));
+define('GF_WC_PG_MONERO_PLUGIN_PATH',dirname( __FILE__ ));
+define('GF_WC_PG_MONERO_PLUGIN_BASENAME',plugin_basename(__FILE__));
+define('GF_WC_PG_MONERO_PLUGIN_SLUG','greyforest-woocommerce-payment-gateway-monero');
+
+// LOAD WC CLASS FOR HPOS ORDERS
+use Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController;
+
+// LOAD PLUGIN UPDATER CLASS
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////////////////////////////
 /// PLUGIN UPDATE CHECKER                                                   ///
 ///////////////////////////////////////////////////////////////////////////////
 require 'plugin-update-checker/plugin-update-checker.php';
-$MyUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
-	'https://www.greyforest.media/plugins/wp-update-server/?action=get_metadata&slug=greyforest-woocommerce-payment-gateway-monero',	/* METADATA URL */
-	__FILE__,																															/* FULL PATH TO MAIN PLUGIN FILE  */
-	'greyforest-woocommerce-payment-gateway-monero' 																					/* PLUGIN SLUG  */
+$myUpdateChecker = PucFactory::buildUpdateChecker(
+	'https://github.com/GreyforestDigital/Greyforest-WooCommerce-Payment-Gateway-Monero',
+	__FILE__,
+	GF_WC_PG_MONERO_PLUGIN_SLUG
 );
+$myUpdateChecker->setBranch('master');
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// ESTABLISH COMPATIBILITY FOR HPOS                             		    ///
+///////////////////////////////////////////////////////////////////////////////	
+add_action('before_woocommerce_init','gf_wc_pg_monero__hpos_compatibility');
+function gf_wc_pg_monero__hpos_compatibility(){
+	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+	}
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
 /// ADD "VIEW SETTINGS" LINK ON PLUGIN PAGE                                 ///
 ///////////////////////////////////////////////////////////////////////////////
-function greyforest_woocommercepaymentgatewaymonero_settings_link($links) {
-	$settings_link = '<a aria-label="View Details" class="thickbox open-plugin-details-modal" href="plugin-install.php?tab=plugin-information&plugin=greyforest-woocommerce-payment-gateway-monero&TB_iframe=true&width=772&height=853">View Details</a>';
-	$settings_link .= ' | <a aria-label="View Settings" href="admin.php?page=wc-settings&tab=checkout&section=monero">Settings</a>';
+add_filter("plugin_action_links_".GF_WC_PG_MONERO_PLUGIN_BASENAME, 'gf_wc_pg_monero__settings_link' );
+function gf_wc_pg_monero__settings_link($links) {
+	$settings_link = '<a aria-label="View Settings" href="admin.php?page=wc-settings&tab=checkout&section=monero">Settings</a>';
 	array_unshift($links, $settings_link);
 	return $links;
 }
-$plugin = plugin_basename(__FILE__);
-add_filter("plugin_action_links_$plugin", 'greyforest_woocommercepaymentgatewaymonero_settings_link' );
 
 
 ///////////////////////////////////////////////////////////////////////////////
 /// ENQUEUE HELPER JS SCRIPT ONLY ON WC SETTINGS PAGES                      ///
 ///////////////////////////////////////////////////////////////////////////////
-add_action('admin_enqueue_scripts', 'woocommerce_gateway_monero_custom_script');
-function woocommerce_gateway_monero_custom_script($hook) {
+add_action('admin_enqueue_scripts', 'gf_wc_pg_monero__admin_script');
+function gf_wc_pg_monero__admin_script($hook) {
 	if( $hook != 'woocommerce_page_wc-settings' ) { return; }
-	wp_enqueue_script( 'woocommerce_gateway_monero_gateway', plugin_dir_url(__FILE__) .'js/admin-monero-gateway-settings.js' );
+	wp_enqueue_script( 'woocommerce_gateway_monero_gateway', plugin_dir_url(__FILE__) .'assets/js/admin-monero-gateway-settings.js' );
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 /// INIT PAYMENT GATEWAY                                                    ///
 ///////////////////////////////////////////////////////////////////////////////
-add_action('plugins_loaded', 'woocommerce_gateway_monero_init', 0);
-
-function woocommerce_gateway_monero_init() {
+add_action('plugins_loaded', 'gf_wc_pg_monero__gateway_init', 0);
+function gf_wc_pg_monero__gateway_init() {
 	if ( !class_exists( 'WC_Payment_Gateway' ) ) return;
 
 	class WC_Gateway_monero extends WC_Payment_Gateway {
@@ -60,7 +88,7 @@ function woocommerce_gateway_monero_init() {
 		*/
 		public function __construct() {
 			$this->id                 = 'monero';
-			$this->icon               = plugins_url( 'media/GATEWAY-monero.svg', __FILE__ );
+			$this->icon               = plugins_url( 'assets/img/xmr-color.svg', __FILE__ );
 			$this->has_fields         = true;
 			$this->method_title       = __( 'Monero (XMR)', 'woocommerce' );
 			$this->method_description = __( 'Allows Monero payments.', 'woocommerce' );
@@ -73,6 +101,7 @@ function woocommerce_gateway_monero_init() {
 			$this->title        = $this->get_option( 'title' );
 			$this->description  = $this->get_option( 'description' );
 			$this->instructions = $this->get_option( 'instructions', $this->description );
+			$this->instructions_email = $this->get_option( 'instructions_email' );
 			$this->address = $this->get_option( 'address');
 			$this->feeordiscount_charge = $this->get_option( 'feeordiscount_charge');
 			$this->feeordiscount_percentage = $this->get_option( 'feeordiscount_percentage');
@@ -82,6 +111,7 @@ function woocommerce_gateway_monero_init() {
 			add_action( 'woocommerce_thankyou_monero', array( $this, 'thankyou_page' ) );
 	
 			// Customer Emails
+			remove_action( 'woocommerce_email_before_order_table', [ 'WC_Payment_Gateway', 'email_instructions' ], 10 );
 			add_action( 'woocommerce_email_before_order_table', array( $this, 'email_instructions' ), 10, 3 );
 		}
 	
@@ -95,34 +125,41 @@ function woocommerce_gateway_monero_init() {
 				'enabled' => array(
 					'title'   => __( 'Enable/Disable', 'woocommerce' ),
 					'type'    => 'checkbox',
-					'label'   => __( 'Enable '.$this->title.' Payment', 'woocommerce' ),
+					'label'   => __( 'Enable Monero (XMR) Payment', 'woocommerce' ),
 					'default' => 'yes'
 				),
 				'title' => array(
 					'title'       => __( 'Title', 'woocommerce' ),
 					'type'        => 'text',
 					'description' => __( 'This controls the title which the user sees during checkout.', 'woocommerce' ),
-					'default'     => __( $this->title, 'woocommerce' ),
+					'default'     => __( 'Monero (XMR)', 'woocommerce' ),
 					'desc_tip'    => true,
 				),
 				'description' => array(
 					'title'       => __( 'Description', 'woocommerce' ),
 					'type'        => 'textarea',
 					'description' => __( 'Payment method description that the customer will see on your checkout.', 'woocommerce' ),
-					'default'     => __( 'For payments made with '.$this->title.', a QR code will be generated with an address and current price in '.$this->title.'.', 'woocommerce' ),
+					'default'     => __( 'For payments made with Monero, a QR code will be generated with an address and current price in Monero.', 'woocommerce' ),
 					'desc_tip'    => true,
 				),
 				'instructions' => array(
 					'title'       => __( 'Instructions', 'woocommerce' ),
 					'type'        => 'textarea',
-					'description' => __( 'Instructions that will be added to the thank you page and emails.', 'woocommerce' ),
-					'default'     => 'To make a '.$this->title.' payment, please click or copy the URL from the QR code below. Payments must be made within 30 minutes or the order will be cancelled. Please include your order number in a separate description or notes field with your crypto payment.',
+					'description' => __( 'Instructions that will be added to the thank you page.', 'woocommerce' ),
+					'default'     => 'To make a payment, please click, scan, or copy the address from the QR code below. Payments must be made within 30 minutes or the order will be cancelled. Please pay the EXACT amount listed to keep your order number and payment synced.',
+					'desc_tip'    => true,
+				),
+				'instructions_email' => array(
+					'title'       => __( 'Email Instructions', 'woocommerce' ),
+					'type'        => 'textarea',
+					'description' => __( 'Instructions that will be added to the email.', 'woocommerce' ),
+					'default'     => 'To make a payment, please send funds to the wallet address listed below. Payments must be made within 30 minutes or the order will be cancelled. Please include the order number in the transaction memo or note field.',
 					'desc_tip'    => true,
 				),
 				'address' => array(
 					'title'       => __( 'Wallet Address', 'woocommerce' ),
 					'type'        => 'text',
-					'description' => __( 'Enter the '.$this->title.' wallet address that you would like to use.', 'woocommerce' ),
+					'description' => __( 'Enter the Monero wallet address that you would like to use.', 'woocommerce' ),
 					'default'     => '',
 					'desc_tip'    => true,
 				),			
@@ -152,14 +189,15 @@ function woocommerce_gateway_monero_init() {
 		/// ORDER RECEIVED / THANK YOU PAGE OUTPUT                                  ///
 		///////////////////////////////////////////////////////////////////////////////
 		public function thankyou_page( $order_id ) {
-		
-		/* WALLET ADDRESS */ $payment['address'] = $this->address;
-		/* ORDER NUMBER   */ $payment['order'] = wc_get_order($order_id);
-		/* ORDER TOTAL    */ $payment['total'] = number_format( (float)$payment['order']->get_total(), 2, '.', '' );
-		/* ORDER ID       */ $payment['orderid'] = $order_id; //$payment_order->get_id();
-		/* PAYMENT TYPE   */ $payment['type'] = $payment['order']->get_payment_method();
-		
-		ob_start(); 
+			
+			$order_info = new WC_Order($order_id);
+			$payment['address'] = $this->address;
+			$payment['order'] = wc_get_order($order_info);
+			$payment['total'] = number_format( (float)$payment['order']->get_total(), 2, '.', '' );
+			$payment['orderid'] = $payment['order']->get_id(); //$order_id;
+			$payment['type'] = $payment['order']->get_payment_method();
+			
+			ob_start(); 
 		
 			// CHECK IF WALLET ADDRESS PROVIDED
 			if (empty($payment['address'])) { echo '<p style="text-align:center;padding:2em 1em;display:block;">ERROR: Wallet address has not been provided by store owner. Contact them to complete transaction.</p>'; }
@@ -226,18 +264,10 @@ function woocommerce_gateway_monero_init() {
 			
 			function CryptoRates(currency) {
 				
-				jQuery('#crypto_paymentcodes').css({'opacity':'0','transition':'.1s ease'});
-				if (currency == 'monero') { var currencySymbol = 'XMR'; }
-				else if (currency == 'bitcoin') { var currencySymbol = 'BTC'; }
-				else if (currency == 'ethereum') { var currencySymbol = 'ETH'; }
-				else if (currency == 'litecoin') { var currencySymbol = 'LTC'; }
-				else if (currency == 'iota') { var currencySymbol = 'MIOTA'; }
-				else if (currency == 'stellar') { var currencySymbol = 'XLM'; }
-				else if (currency == 'ripple') { var currencySymbol = 'XRP'; }
-			
+				jQuery('#crypto_paymentcodes').css({'opacity':'0','transition':'.1s ease'});			
 				jQuery.ajax({
 					dataType: "json",
-					url: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,monero,stellar,ripple,iota&vs_currencies=usd",
+					url: "https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd",
 					crossDomain: true,
 					success: function( data ) {
 						var payment_before = "<?php echo $payment['total']; ?>";
@@ -245,7 +275,7 @@ function woocommerce_gateway_monero_init() {
 						var payment_orderid = "<?php echo $payment['orderid']; ?>";
 						var payment_after = (payment_before/data[currency].usd).toFixed(7);
 						jQuery("#crypto_paymentamount").html(payment_after+"000"+payment_orderid);
-						jQuery("#crypto_symbol").html(currencySymbol);
+						jQuery("#crypto_symbol").html('XMR');
 						jQuery("#crypto_timer").html("Value was calculated at "+(new Date()).toLocaleString()+" and is only valid for 1 minute. Price will automatically refresh.");
 						jQuery("#crypto_qrcode a").attr("href", currency+":"+payment_address);
 						jQuery('#crypto_paymentcodes').css({'opacity':'1','transition':'.1s ease'});
@@ -263,7 +293,7 @@ function woocommerce_gateway_monero_init() {
 		/// ORDER RECEIVED / THANK YOU PAGE OUTPUT                                  ///
 		///////////////////////////////////////////////////////////////////////////////
 	
-	
+
 		/**
 		* Add content to the WC emails.
 		*
@@ -273,9 +303,12 @@ function woocommerce_gateway_monero_init() {
 		* @param bool $plain_text
 		*/
 		public function email_instructions( $order, $sent_to_admin, $plain_text = false ) {
-			if ( $this->instructions && ! $sent_to_admin && $this->id == $order->get_payment_method() && $order->has_status( 'on-hold' ) ) {
-				echo wpautop( wptexturize( $this->instructions ) ) . PHP_EOL;
+			
+			if ( $this->instructions_email && ! $sent_to_admin && $this->id == $order->get_payment_method() && $order->has_status( 'on-hold' ) ) {
+				echo wpautop( wptexturize( $this->instructions_email ) );
+				echo '<p><b>ADDRESS:</b> <span style="display:inline-block;max-width:500px;word-wrap:break-word !important;">'.$this->address.'</span></p>';
 			}
+			
 		}
 	
 	
@@ -307,31 +340,24 @@ function woocommerce_gateway_monero_init() {
 		
 	} // END CLASS
 } // END FUNCTION
+
+
 ///////////////////////////////////////////////////////////////////////////////
-/// END INIT PAYMENT GATEWAY                                                ///
+/// ADD GATEWAY 		                                                    ///
 ///////////////////////////////////////////////////////////////////////////////
-
-
-
-
-////////////////////////////////////////////////
-/*
-* Add the Gateway to WooCommerce
-*/
-////////////////////////////////////////////////
-function woocommerce_add_gateway_monero($methods) {
+add_filter('woocommerce_payment_gateways', 'gf_wc_pg_monero__gateway_add' ); 
+function gf_wc_pg_monero__gateway_add($methods) {
 	$methods[] = 'WC_Gateway_monero';
 	return $methods;
 }
-add_filter('woocommerce_payment_gateways', 'woocommerce_add_gateway_monero' ); 
 
 
-
-
-////////////////////////////////////////////////
-/////   WOO - CUSTOM CRYPTO FEE/DISCOUNT   /////
-////////////////////////////////////////////////
-function gf_monero_customfeeordiscount( $payment_fee ) {
+///////////////////////////////////////////////////////////////////////////////
+/// CART/CHECKOUT - ADD FEES/DISCOUNTS TO ORDER                             ///
+///////////////////////////////////////////////////////////////////////////////
+add_action( 'woocommerce_cart_calculate_fees','gf_wc_pg_monero__custom_fee_or_discount', 25 );
+function gf_wc_pg_monero__custom_fee_or_discount( $payment_fee ) {
+	
 	if ( ( is_admin() && ! defined( 'DOING_AJAX' ) ) || ! is_checkout() )
 		return;
 	
@@ -371,12 +397,13 @@ function gf_monero_customfeeordiscount( $payment_fee ) {
 	// IF AMOUNT IS NOT ZERO, ADD TO CART
 	if ( ( $chosen_gateway == 'monero' ) && ( $feeordiscount_final != "0" ) ) { WC()->cart->add_fee( $feeordiscount_text, $feeordiscount_final, false, '' ); }
 }
-add_action( 'woocommerce_cart_calculate_fees','gf_monero_customfeeordiscount', 25 );
 
-////////////////////////////////////////////////
- 
-// JQUERY AJAX TRIGGER UPDATING OF PAYMENT GATEWAYS SECTION
+
+///////////////////////////////////////////////////////////////////////////////
+/// CART/CHECKOUT - TRIGGER UPDATING OF TOTALS                              ///
+///////////////////////////////////////////////////////////////////////////////
 if ( ! function_exists( 'gf_crypto_cart_update_script' ) ) {
+	add_action( 'wp_footer', 'gf_crypto_cart_update_script', 999 );
 	function gf_crypto_cart_update_script() {
 		if (is_checkout()) :
 		?>
@@ -394,9 +421,4 @@ if ( ! function_exists( 'gf_crypto_cart_update_script' ) ) {
 		<?php
 		endif;
 	}
-add_action( 'wp_footer', 'gf_crypto_cart_update_script', 999 );
 }
-
-////////////////////////////////////////////////
-/////   WOO - CUSTOM CRYPTO FEE/DISCOUNT   /////
-////////////////////////////////////////////////

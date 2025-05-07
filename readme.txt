@@ -1,39 +1,53 @@
-=== Greyforest ::: WooCommerce Payment Gateway - Monero ===
-Donate link: https://www.paypal.me/greyforestmedia
-Tags: woocommerce, payment gateway, crypto currency, monero
-Requires at least: 5.0
-Tested up to: 5.5
-Stable tag: 2.1.1
-License: None
-License URI: None
+=== Greyforest ::: Monero (XMR) Payment Gateway for WooCommerce ===
+Contributors: GreyforestDigital
+Tags: woocommerce, payment gateway, crypto currency, monero, xmr
+Requires at least: 6.0.0
+Tested up to: 6.8.1
+WC requires at least: 6.0.0
+WC tested up to: 9.8.4
+Stable tag: 2.2.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-This plugin adds a minimal Monero payment gateway to a WooCommerce shop.
+This plugin adds a minimal Monero (XMR) payment gateway to a WooCommerce shop.
 
 == Description ==
 
-This plugin adds a minimal Monero payment gateway to a WooCommerce shop.
+This plugin adds a minimal Monero (XMR) payment gateway to a WooCommerce shop.
 
-When customers check "Monero" on the Checkout page, they are redirected to the "Order Received" page, 
-where they are presented a dynamically-generated QR code with the store's chosen wallet address, and a price in Monero
-converted from current rates pulled from CoinGecko's API. The rates and QR code regenerate every minute, ensuring the price
-is accurate.
+All funds are paid directly into the wallet address provided, with no KYC, third-party platforms, or external services required aside from public CoinGecko API.
 
-To setup, enable the Gateway through WooCommerce's settings panel, enter your Monero wallet address, choose a fee/discount option if desired, 
-and the percentage you would like to add/subtract to each payment as a fee/discount (enter 0 if none).
+When customers check "Monero" on the Checkout page, they are redirected to the "Order Received" page, where they are presented a dynamically-generated QR code with the store's chosen wallet address, and a price in Monero converted from current rates pulled from CoinGecko's API. The rates and QR code regenerate every minute, ensuring the price is accurate.
 
-FUTURE UPGRADES:
-Wallet address array to provide multiple possible addresses for randomization & potential enhanced privacy.
+
+To setup, enable the Gateway through WooCommerce's settings panel, enter your Monero wallet address, choose a fee/discount option if desired, and the percentage you would like to add/subtract to each payment as a fee/discount (enter 0 if none).
+
+**NOTICE:**  
+* Does not work with WooCommerce block-based Checkout. Only functional with classic checkout.
+* There is no automated syncing or transaction data being transmitted. Store owners must manually check their wallets for a transaction's status.
+
+**FUTURE UPGRADES:**
+* Wallet address array to provide multiple possible addresses for randomization & potential enhanced privacy.
+* Setting to choose icon for checkout
+* Block-based checkout compatibility
 
 
 == Installation ==
 
-1. Upload the plugin files to the `/wp-content/plugins/plugin-name` directory, or install the plugin through the WordPress plugins screen directly.
+1. Upload the plugin files to the `/wp-content/plugins/greyforest-woocommerce-payment-gateway-monero` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress
-
-To change payment icon, overwrite "GATEWAY-monero.png" in the plugin folder. 
 
 
 == Changelog ==
+
+= 2.2.0 =
+* Upgraded plugin-update-checker library to v5
+* Changed location of plugin update source to Github repository
+* Added WooCommerce High Performance Order Storage (HPOS) Compatibility
+* Fixed duplicated email instructions bug
+* Changed visible plugin title to match WC brand requirements ("__ for WC" instead of "WC ___")
+* General code cleanup
+* Updated readme.txt with GPL license and new info
 
 = 2.1.1 =
 * Updated price API to CoinGecko to continue free functionality
